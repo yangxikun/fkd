@@ -1,0 +1,2 @@
+# fkd
+filebeat kubernetes discovery
