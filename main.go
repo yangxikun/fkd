@@ -10,10 +10,11 @@ import (
 	"gopkg.in/yaml.v2"
 	"github.com/deckarep/golang-set"
 	"github.com/golang/glog"
+	coreV1 "k8s.io/api/core/v1"
 )
 
 var podNamespace = flag.String("pod-namespace", "", "discover pods in namespace")
-var selector = flag.String("pod-selector", "", "pods selector")
+var selectors = flag.String("pod-selectors", "", "comma separate pod selectors")
 var filebeatNamespace = flag.String("filebeat-namespace", "", "filebeat namespace")
 var configMap = flag.String("configmap", "", "filebeat prospectors kubernetes configmap")
 var configMapKey = flag.String("configmap-key", "", "filebeat prospectors kubernetes configmap key")
@@ -39,16 +40,20 @@ func main() {
 	for {
 		<- tick.C
 		// list pod
-		podList, err := clientset.CoreV1().Pods(*podNamespace).List(v1.ListOptions{
-			LabelSelector: *selector,
-		})
-		if err != nil {
-			glog.Error(err)
-			continue
+		var podList []coreV1.Pod
+		for _, selector := range strings.Split(*selectors, ",") {
+			pl, err := clientset.CoreV1().Pods(*podNamespace).List(v1.ListOptions{
+				LabelSelector: selector,
+			})
+			if err != nil {
+				glog.Error(err)
+				continue
+			}
+			podList = append(podList, pl.Items...)
 		}
 		// get pod container id
 		var containerIDs []string
-		for _, pod := range podList.Items {
+		for _, pod := range podList {
 			glog.V(1).Infoln(pod.Name)
 			for _, status := range pod.Status.ContainerStatuses {
 				containerIDs = append(containerIDs, strings.TrimPrefix(status.ContainerID, "docker://"))
