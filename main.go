@@ -22,6 +22,7 @@ var configMapKey = flag.String("configmap-key", "", "filebeat prospectors kubern
 var filebeatProspectorsK8sYaml []struct{
 	Type string
 	ContainersIDs []string `yaml:"containers.ids"`
+	TailFiles bool `yaml:"tail_files"`
 	Processors []struct{
 		AddKuernetesMetadata struct{
 			InCluster bool `yaml:"in_cluster"`
@@ -37,8 +38,7 @@ func main() {
 	}
 	clientset := kubernetes.NewForConfigOrDie(config)
 	tick := time.NewTicker(10*time.Second)
-	for {
-		<- tick.C
+	for range tick.C {
 		// list pod
 		var podList []coreV1.Pod
 		for _, selector := range strings.Split(*selectors, ",") {
